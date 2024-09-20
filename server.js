@@ -63,7 +63,7 @@ const connectDB = async () => {
         //process.env.MONGO_URI
         //"mongodb://127.0.0.1:27017/user"
         "mongodb+srv://deepak_sri:oEr5Qq9EvW8bI9sM@cluster-mongo-db.fnl4vzi.mongodb.net/?retryWrites=true&w=majority&appName=Cluster-mongo-db"
-        ,{
+        ,   {
             'dbName': 'obstacles'
            }
        );
