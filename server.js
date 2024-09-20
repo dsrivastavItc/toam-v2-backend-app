@@ -81,7 +81,7 @@ const connectDB = async () => {
 
 connectDB();
 
-const { WEBHOOK_VERIFY_TOKEN, GRAPH_API_TOKEN, PORT } = process.env;
+const { WEBHOOK_VERIFY_TOKEN, GRAPH_API_TOKEN } = process.env;
 
 app.post("/webhook", async (req, res) => {
   // log incoming messages
@@ -211,11 +211,15 @@ app.get("/webhook", (req, res) => {
   }
 });
 
-app.get("/", (req, res) => {
-  res.send(`<pre>Nothing to see here.
-Checkout README.md to start.</pre>`);
-});
+app.get("/", async (req, res) => {
 
+ const conn = await connectDB();
+  res.send(`<pre>Nothing to see here.
+Checkout README.md to start.</pre>` + conn.dbName);
+
+
+});
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server is listening on port: ${PORT}`);
 });
