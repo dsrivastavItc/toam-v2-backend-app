@@ -8,10 +8,19 @@
 import express from "express";
 import axios from "axios";
 import mongoose from "mongoose";
+import cors from "cors";
+import Message from './models/Message.js'
 
 const app = express();
 app.use(express.json());
 
+
+
+app.use(
+  cors({
+    origin: "https://toam-v2-frontend-app.onrender.com"
+  })
+);
 const MessageSchema = new mongoose.Schema({
   from: String,
   body: String,
@@ -218,6 +227,20 @@ app.get("/", async (req, res) => {
 Checkout README.md to start.</pre>` + conn.dbName);
 
 
+});
+
+app.get('/messages', async (req, res) => {
+  const db = await connectDB();
+  //const Message = require('./models/Message.js');
+  try{
+   const messages =  await Message.find().sort({timestamp: 1});
+    res.status(200).json(messages);
+ }
+ catch (error)
+ {
+     res.status(500).json({message: error.message});
+ }
+ 
 });
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
