@@ -242,6 +242,37 @@ app.get('/messages', async (req, res) => {
  }
  
 });
+
+
+const complaintSchema = new mongoose.Schema({
+  TradeDirection: String,
+  Description: String,
+  Date: Date,
+  IsRecurringProblem: String,
+  LocationName: String,
+  ProductDetails: String,
+  TradeRegulationType: String,
+  Status: String,
+  SubmitDate: Date,
+  LocationCountryCode: String,
+  TradeOriginCountryCode: String,
+  TradeDestinationCountryCode: String,
+  Remarks: String
+});
+
+const Complaint = mongoose.model('Complaint', complaintSchema);
+
+// API endpoint to get all complaints
+app.get('/complaints', async (req, res) => {
+  try {
+      const complaints = await Complaint.find();
+      res.json(complaints);
+  } catch (error) {
+      res.status(500).send('Error fetching complaints');
+  }
+});
+
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server is listening on port: ${PORT}`);
