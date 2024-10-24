@@ -8,24 +8,21 @@
 import express from "express";
 import axios from "axios";
 import mongoose from "mongoose";
-import cors from "cors";
-import Message from './models/Message.js'
+import summarizeMessage from "/app/summarize.js";
+import extractInformationFromMessage from "/app/extractInfo.js";
 
 const app = express();
 app.use(express.json());
 
-
-
-app.use(
-  cors({
-    origin: "https://toam-v2-frontend-app.onrender.com"
-  })
-);
 const MessageSchema = new mongoose.Schema({
   from: String,
   body: String,
   timestamp: Date,
+  status: String,
+  obstacleId: String,
+  userId: String
 });
+
 
 const UserSchema = new mongoose.Schema({
   firstName: String,
@@ -40,6 +37,7 @@ const UserSchema = new mongoose.Schema({
 const ComplaintSchema = new mongoose.Schema({
   TradeDirection: String,  
 	Description: String,  
+  Summary: String,
 	Date: Date,  
 	IsRecurringProblem: String,
 	LocationName: String,
@@ -52,8 +50,9 @@ const ComplaintSchema = new mongoose.Schema({
 	LocationCountryCode: String,
 	LocationCode: String,
 	TradeRegulationCode: String,  
-	TradeOriginCountryCode: String,  
-	TradeDestinationCountryCode: String,  
+	TradeOriginCountry: String,  
+	TradeDestinationCountry: String,  
+  ObstacleType: String,
 	SubmitUserUserId: String,  
 	Version: String,
 	WebsiteCode: String,  
@@ -72,11 +71,11 @@ const connectDB = async () => {
         //process.env.MONGO_URI
         //"mongodb://127.0.0.1:27017/user"
         "mongodb+srv://deepak_sri:oEr5Qq9EvW8bI9sM@cluster-mongo-db.fnl4vzi.mongodb.net/?retryWrites=true&w=majority&appName=Cluster-mongo-db"
-        ,   {
+        ,{
             'dbName': 'obstacles'
            }
        );
-       console.log('MongoDB connected');
+       console.log('MongoDB connected!');
     
 
       
@@ -90,7 +89,10 @@ const connectDB = async () => {
 
 connectDB();
 
-const { WEBHOOK_VERIFY_TOKEN, GRAPH_API_TOKEN } = process.env;
+//const msgSummary = await summarizeMessage("I am an exporter who is exporting goods from Ghana to Uganda via road, I am exporting mangos and I have been stopped at the border asking for Certificate of Origin paper and also asking for bribe to allow me to cross the border. Please help me resolve my issue.");
+//console.log(msgSummary);
+
+const { WEBHOOK_VERIFY_TOKEN, GRAPH_API_TOKEN, PORT } = process.env;
 
 app.post("/webhook", async (req, res) => {
   // log incoming messages
@@ -99,7 +101,16 @@ app.post("/webhook", async (req, res) => {
   // check if the webhook request contains a message
   // details on WhatsApp text message payload: https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/payload-examples#text-messages
   const message = req.body.entry?.[0]?.changes[0]?.value?.messages?.[0];
-
+  
+  
+  console.log("message type: ",  message?.type);
+  
+  //if (message?.type === "audio")
+  // {
+  //    console.log("message type audio: ",  message?.audio?.id);
+  // }
+        
+  
   // check if the incoming message contains text
   if (message?.type === "text") {
     // extract the business number to send the reply from it
@@ -111,58 +122,70 @@ app.post("/webhook", async (req, res) => {
   //console.log(await conn.model('messages',MessageSchema).findById('66cf0ee486f96d109e08f3da'));
   const saveMsg = await conn.model('messages', MessageSchema).create({ from: message.from,
   body: message.text.body,
+  type: message?.type,                                                                      
   timestamp: new Date(), });
     
     console.log(saveMsg);
+   const messageId = saveMsg?._id;
     
+    console.log("messageID: " + messageId);
   //const getUser = await conn.model('users',UserSchema).find({ mobile: message.from });
   //console.log(getUser);
   //if(!getUser)
    // {
+    
+    //TODO: check userid before saving it
     console.log("saveUser called");
-    const saveUser = await conn.model('users',UserSchema).create({ mobile: message.from, timestamp: new Date()});
+    const saveUser = await conn.model('users',UserSchema).create({ 
+      firstName: 'Deepak',
+    LastName: 'Srivastav',
+    gender: 'Male',
+    email: 'srivastav@intracen.org',
+      mobile: message.from, 
+      timestamp: new Date(),
+    
+    });
     console.log(saveUser);
-   /* }
-  else
-    {
-      //update product
-      const updateUser = await conn.model('users', UserSchema).updateOne( 
-      
-        { mobile: message.from },
-      {
-        $set: {
-          timestamp: new Date()
-        }
-      }
-      );
-      console.log(updateUser);
-    }
-    */
+    
+    const userID = saveUser?._id;
+    
+    const messageSummary = await summarizeMessage(message.text.body);
+    
+     
+      const extractedData = await extractInformationFromMessage(message.text.body);
+       
+      console.log('Extracted Information:', extractedData);
+    
+    
+   
     
     console.log("saveComplaint called");
+    
     const saveComplaint = await conn.model('complaints',ComplaintSchema).create({ 
       TradeDirection: 'Import',
       Description: message.text.body, 
+      Summary: messageSummary,
       Date: new Date(),
-      IsRecurringProblem: 'No',
+      IsRecurringProblem: '',
       LocationName: 'Border',
-      ProductDetails: 'Cacao en feve',
+      ProductDetails: extractedData?.product,
       TradeRegulationType: 'NationalRegulation', 
       OtherRegulation: 'N/A',  
       Remarks: 'N/A',  
       Status: 'New',  
       SubmitDate: new Date(),  
-      LocationCountryCode: '012',
-      TradeOriginCountryCode: '504',  
-      TradeDestinationCountryCode: '504',  
-      SubmitUserUserId: '66ec306069453f1fe31b9382',  
+      LocationCountryCode: '',
+      TradeOriginCountry: extractedData?.exporting_country,  
+      TradeDestinationCountry: extractedData?.importing_country,  
+      ObstacleType: extractedData?.obstacle_type,
+      SubmitUserUserId: userID,  
       Version: '1',
-      WebsiteCode: 'cotedivoire',  
+      WebsiteCode: '',  
       Code: '2',  
       PublishedDate: new Date(),
       SectorSectorId: 'N/A', 
       ProductServiceType: 'N/A',
-      MessageId: '66cf0ee486f96d109e08f3da'
+      MessageId: messageId
     });
     console.log(saveComplaint);
     
@@ -176,13 +199,15 @@ app.post("/webhook", async (req, res) => {
       data: {
         messaging_product: "whatsapp",
         to: message.from,
-        text: { body: "We acknowledge your message, please reply to this message with your {firstname: '', lastName: '', email: ''} format " + message.text.body },
+        text: { body: "We acknowledge your message and here is the summary <" + messageSummary + "> Following is the extracted info" + JSON.stringify(extractedData) + ". Please reply to this message Yes or No in order to register a complaint" },
         context: {
           message_id: message.id, // shows the message as a reply to the original user message
         },
       },
     });
 
+    
+    
     // mark incoming message as read
     await axios({
       method: "POST",
@@ -201,6 +226,8 @@ app.post("/webhook", async (req, res) => {
   
   res.sendStatus(200);
 });
+  // check if the incoming message contains text
+
 
 // accepts GET requests at the /webhook endpoint. You need this URL to setup webhook initially.
 // info on verification request payload: https://developers.facebook.com/docs/graph-api/webhooks/getting-started#verification-requests
@@ -222,58 +249,44 @@ app.get("/webhook", (req, res) => {
 
 app.get("/", async (req, res) => {
 
- const conn = await connectDB();
-  res.send(`<pre>Nothing to see here.
-Checkout README.md to start.</pre>` + conn.dbName);
-
-
-});
-
-app.get('/messages', async (req, res) => {
-  const db = await connectDB();
-  //const Message = require('./models/Message.js');
-  try{
-   const messages =  await Message.find().sort({timestamp: 1});
-    res.status(200).json(messages);
- }
- catch (error)
- {
-     res.status(500).json({message: error.message});
- }
+  const conn = await connectDB();
+   res.send(`<pre>Nothing to see here.
+ Checkout README.md to start.</pre>` + conn.dbName);
  
-});
+ 
+ });
+ 
+ app.get('/messages', async (req, res) => {
+   const db = await connectDB();
+   //const Message = require('./models/Message.js');
 
+ const Message = mongoose.model('Message', MessageSchema);
 
-const complaintSchema = new mongoose.Schema({
-  TradeDirection: String,
-  Description: String,
-  Date: Date,
-  IsRecurringProblem: String,
-  LocationName: String,
-  ProductDetails: String,
-  TradeRegulationType: String,
-  Status: String,
-  SubmitDate: Date,
-  LocationCountryCode: String,
-  TradeOriginCountryCode: String,
-  TradeDestinationCountryCode: String,
-  Remarks: String
-});
-
-const Complaint = mongoose.model('Complaint', complaintSchema);
-
-// API endpoint to get all complaints
-app.get('/complaints', async (req, res) => {
-  try {
-      const complaints = await Complaint.find();
-      res.json(complaints);
-  } catch (error) {
-      res.status(500).send('Error fetching complaints');
+   try{
+    const messages =  await Message.find().sort({timestamp: -1});
+     res.status(200).json(messages);
   }
-});
+  catch (error)
+  {
+      res.status(500).json({message: error.message});
+  }
+  
+ });
+ 
+  
+ const Complaint = mongoose.model('Complaint', complaintSchema);
+ 
+ // API endpoint to get all complaints
+ app.get('/complaints', async (req, res) => {
+   try {
+       const complaints = await Complaint.find().sort({Date: -1});
+       res.json(complaints);
+   } catch (error) {
+       res.status(500).send('Error fetching complaints');
+   }
+ });
+ 
 
-
-const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server is listening on port: ${PORT}`);
 });
