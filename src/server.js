@@ -8,15 +8,23 @@
 import express from "express";
 import axios from "axios";
 import mongoose from "mongoose";
+import cors from "cors";
 import summarizeMessage from "./controllers/app/summarize.js";
 import extractInformationFromMessage from "./controllers/app/extractInfo.js";
 
 const app = express();
 app.use(express.json());
 
+app.use(
+  cors({
+    origin: "https://toam-v2-frontend-app.onrender.com"
+  })
+);
+
 const MessageSchema = new mongoose.Schema({
   from: String,
   body: String,
+  type: String,
   timestamp: Date,
   status: String,
   obstacleId: String,
