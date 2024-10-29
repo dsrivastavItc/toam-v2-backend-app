@@ -8,8 +8,8 @@
 import express from "express";
 import axios from "axios";
 import mongoose from "mongoose";
-import summarizeMessage from "/app/summarize.js";
-import extractInformationFromMessage from "/app/extractInfo.js";
+import summarizeMessage from "./controllers/app/summarize.js";
+import extractInformationFromMessage from "./controllers/app/extractInfo.js";
 
 const app = express();
 app.use(express.json());
@@ -92,7 +92,7 @@ connectDB();
 //const msgSummary = await summarizeMessage("I am an exporter who is exporting goods from Ghana to Uganda via road, I am exporting mangos and I have been stopped at the border asking for Certificate of Origin paper and also asking for bribe to allow me to cross the border. Please help me resolve my issue.");
 //console.log(msgSummary);
 
-const { WEBHOOK_VERIFY_TOKEN, GRAPH_API_TOKEN, PORT } = process.env;
+const { WEBHOOK_VERIFY_TOKEN, GRAPH_API_TOKEN } = process.env;
 
 app.post("/webhook", async (req, res) => {
   // log incoming messages
@@ -249,9 +249,9 @@ app.get("/webhook", (req, res) => {
 
 app.get("/", async (req, res) => {
 
-  const conn = await connectDB();
+  //const conn = await connectDB();
    res.send(`<pre>Nothing to see here.
- Checkout README.md to start.</pre>` + conn.dbName);
+ Checkout README.md to start.</pre>`);
  
  
  });
@@ -274,7 +274,7 @@ app.get("/", async (req, res) => {
  });
  
   
- const Complaint = mongoose.model('Complaint', complaintSchema);
+ const Complaint = mongoose.model('Complaint', ComplaintSchema);
  
  // API endpoint to get all complaints
  app.get('/complaints', async (req, res) => {
@@ -286,6 +286,7 @@ app.get("/", async (req, res) => {
    }
  });
  
+const PORT = process.env.PORT??5000;
 
 app.listen(PORT, () => {
   console.log(`Server is listening on port: ${PORT}`);

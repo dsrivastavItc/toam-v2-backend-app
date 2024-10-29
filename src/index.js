@@ -4,7 +4,7 @@ const body_parser = require('body-parser');
 
 const app = express()
 
-const productRoute = require('./routes/product.route.js');
+const productRoute = require('../routes/product.route.js');
 
 //middleware
 app.use(express.json());
